@@ -14,42 +14,88 @@ fn main() {
     scale(cli.input_file, cli.size);
 }
 
-fn scale<P: Into<PathBuf>>(infile: P, size: (u32, u32)) {
-    let infile: PathBuf = infile.into();
+fn scale<P: Into<PathBuf>>(input_file: P, size: (u32, u32)) {
+    let mut filepath: PathBuf = input_file.into();
 
-    let file = match File::open(&infile) {
+    let file = match File::open(&filepath) {
         Ok(file) => file,
         Err(e) => {
-            eprintln!("Failed to open '{}': {}", infile.to_string_lossy(), e);
+            eprintln!("Failed to open '{}': {}", filepath.to_string_lossy(), e);
             return;
         }
     };
 
     let decoder = Decoder::new(file);
-    let mut reader = decoder.read_info().unwrap();
+    let mut reader = match decoder.read_info() {
+        Ok(reader) => reader,
+        Err(e) => {
+            eprintln!(
+                "Failed to read PNG header from '{}': {}",
+                filepath.to_string_lossy(),
+                e
+            );
+            return;
+        }
+    };
+
     let mut buf = vec![0; reader.output_buffer_size()];
-    let info = reader.next_frame(&mut buf).unwrap();
+    let info = match reader.next_frame(&mut buf) {
+        Ok(info) => info,
+        Err(e) => {
+            eprintln!(
+                "Failed to read an image from '{}': {}",
+                filepath.to_string_lossy(),
+                e
+            );
+            return;
+        }
+    };
 
-    let original_width = info.width;
-    let original_height = info.height;
+    if info.color_type != ColorType::Rgba {
+        panic!("FIXME: Cannot handle color types other than Rgba!");
+    }
 
-    let new = nearest::nearest(&buf, original_width, original_height, size.0, size.1);
+    let new = nearest::nearest(&buf, info.width, info.height, size.0, size.1);
 
-    let newstem = format!(
-        "{}_{}x{}.png",
-        infile.file_stem().unwrap().to_string_lossy(),
-        size.0,
-        size.1
-    );
-    let mut newname = infile.clone();
-    newname.set_file_name(newstem);
+    // We're reusing the input files PathBuf here
+    let input_stem = filepath.file_stem().unwrap().to_string_lossy().to_string();
+    filepath.set_file_name(format!("{}_{}x{}.png", input_stem, size.0, size.1));
 
-    let ofile = File::create(newname).unwrap();
+    let ofile = match File::create(&filepath) {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!(
+                "Could not create the output file '{}': {}",
+                filepath.to_string_lossy(),
+                e
+            );
+            return;
+        }
+    };
 
     let mut encoder = Encoder::new(ofile, size.0, size.1);
     encoder.set_color(ColorType::Rgba);
     encoder.set_depth(BitDepth::Eight);
 
-    let mut writer = encoder.write_header().unwrap();
-    writer.write_image_data(&new).unwrap();
+    match encoder.write_header() {
+        Err(e) => {
+            eprintln!(
+                "Failed to write PNG header to '{}': {}",
+                filepath.to_string_lossy(),
+                e
+            );
+            return;
+        }
+        Ok(mut w) => match w.write_image_data(&new) {
+            Err(e) => {
+                eprintln!(
+                    "Failed to write image data to '{}': {}",
+                    filepath.to_string_lossy(),
+                    e
+                );
+                return;
+            }
+            Ok(()) => (),
+        },
+    }
 }
