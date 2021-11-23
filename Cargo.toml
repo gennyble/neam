@@ -1,9 +1,12 @@
 [package]
+edition = "2021"
+authors = ["Genevive Alfirevic <gen@nyble.dev"]
+license-file = "LICENSE"
+
 name = "neam"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "cli tool to scale PNGs with Nearest Neighbor"
+repository = "https://github.com/gennyble/neam"
 
 [dependencies]
 png = "0.17"
