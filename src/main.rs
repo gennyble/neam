@@ -49,11 +49,14 @@ fn scale(input_file: PathBuf, output_file: PathBuf, size: (u32, u32)) {
         }
     };
 
-    if info.color_type != ColorType::Rgba {
-        panic!("FIXME: Cannot handle color types other than Rgba!");
-    }
-
-    let new = nearest::nearest(&buf, info.width, info.height, size.0, size.1);
+    let new = nearest::nearest(
+        &buf,
+        info.color_type.samples(),
+        info.width,
+        info.height,
+        size.0,
+        size.1,
+    );
 
     let ofile = match File::create(&output_file) {
         Ok(file) => file,
@@ -68,7 +71,7 @@ fn scale(input_file: PathBuf, output_file: PathBuf, size: (u32, u32)) {
     };
 
     let mut encoder = Encoder::new(ofile, size.0, size.1);
-    encoder.set_color(ColorType::Rgba);
+    encoder.set_color(info.color_type);
     encoder.set_depth(BitDepth::Eight);
 
     match encoder.write_header() {
