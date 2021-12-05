@@ -3,7 +3,8 @@ mod nearest;
 
 use std::{fs::File, path::PathBuf};
 
-use png::{BitDepth, ColorType, Decoder, Encoder};
+use cli::Scale;
+use png::{BitDepth, Decoder, Encoder};
 
 fn main() {
     let cli = match cli::CliArgs::parse() {
@@ -11,10 +12,10 @@ fn main() {
         None => return,
     };
 
-    scale(cli.input_file, cli.output_file, cli.size);
+    scale(cli.input_file, cli.output_file, cli.scale);
 }
 
-fn scale(input_file: PathBuf, output_file: PathBuf, size: (u32, u32)) {
+fn scale(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
     let file = match File::open(&input_file) {
         Ok(file) => file,
         Err(e) => {
@@ -49,13 +50,25 @@ fn scale(input_file: PathBuf, output_file: PathBuf, size: (u32, u32)) {
         }
     };
 
+    let (new_width, new_height) = match scale {
+        Scale::Absolute(width, height) => (width, height),
+        Scale::Percent(mut perc) => {
+            perc /= 100.0;
+
+            (
+                (info.width as f32 * perc) as u32,
+                (info.height as f32 * perc) as u32,
+            )
+        }
+    };
+
     let new = nearest::nearest(
         &buf,
         info.color_type.samples(),
         info.width,
         info.height,
-        size.0,
-        size.1,
+        new_width,
+        new_height,
     );
 
     let ofile = match File::create(&output_file) {
@@ -70,7 +83,7 @@ fn scale(input_file: PathBuf, output_file: PathBuf, size: (u32, u32)) {
         }
     };
 
-    let mut encoder = Encoder::new(ofile, size.0, size.1);
+    let mut encoder = Encoder::new(ofile, new_width, new_height);
     encoder.set_color(info.color_type);
     encoder.set_depth(BitDepth::Eight);
 

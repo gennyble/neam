@@ -1,98 +1,76 @@
-use std::path::PathBuf;
-
-use getopts::Options;
+use core::fmt;
+use std::{path::PathBuf, str::FromStr};
 
 pub struct CliArgs {
     pub input_file: PathBuf,
     pub output_file: PathBuf,
-    pub size: (u32, u32),
+    pub scale: Scale,
 }
 
 impl CliArgs {
-    fn usage<S: AsRef<str>>(program_name: S, opts: &Options) {
-        let brief = format!("usage: {} FILE [options]", program_name.as_ref());
-        eprint!("{}", opts.usage(&brief));
+    fn usage() {
+        eprintln!(include_str!("usage.txt"));
     }
 
     pub fn parse() -> Option<Self> {
         let prgm = std::env::args().next().unwrap();
         let args: Vec<String> = std::env::args().skip(1).collect();
 
-        let mut opts = Options::new();
-        opts.optopt(
-			"s",
-			"size",
-			"The new size of the image.\nYou can separate width/height with an x or a comma.\nEx: 512x512 or 512,512",
-			"SIZE"
-		);
-        opts.optopt(
-            "o",
-            "output",
-            "The name of the output file.\nDefaults to the input name with _widthxheight appended",
-            "PATH",
-        );
-        opts.optflag("h", "help", "Print this help message");
-        let matches = match opts.parse(&args) {
-            Ok(m) => m,
-            Err(e) => {
-                eprintln!("error: {}", e);
-                return None;
-            }
-        };
+        match args.len() {
+            0 | 1 => {
+                Self::usage();
 
-        if matches.opt_present("help") {
-            Self::usage(prgm, &opts);
-            return None;
+                None
+            }
+            2 | 3 => {
+                let scale = match args[1].parse() {
+                    Ok(width_height) => width_height,
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        return None;
+                    }
+                };
+
+                let input_file = PathBuf::from(&args[0]);
+
+                let output_file = if let Some(out) = args.get(2) {
+                    PathBuf::from(out)
+                } else {
+                    let mut out = input_file.clone();
+                    let input_stem = out.file_stem().unwrap().to_string_lossy().to_string();
+                    out.set_file_name(format!("{}_{}.png", input_stem, scale));
+
+                    out
+                };
+
+                Some(Self {
+                    input_file,
+                    output_file,
+                    scale,
+                })
+            }
+            _ => {
+                eprintln!("Too many arguments!");
+                Self::usage();
+
+                None
+            }
         }
-
-        let size = if let Some(scale) = matches.opt_str("size") {
-            match Self::parse_scale_string(scale) {
-                Ok(width_height) => width_height,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    return None;
-                }
-            }
-        } else {
-            Self::usage(prgm, &opts);
-            return None;
-        };
-
-        let input_file = if !matches.free.is_empty() {
-            PathBuf::from(&matches.free[0])
-        } else {
-            Self::usage(prgm, &opts);
-            return None;
-        };
-
-        let output_file = if let Some(out) = matches.opt_str("output") {
-            PathBuf::from(out)
-        } else {
-            let mut out = input_file.clone();
-            let input_stem = out.file_stem().unwrap().to_string_lossy().to_string();
-            out.set_file_name(format!("{}_{}x{}.png", input_stem, size.0, size.1));
-
-            out
-        };
-
-        Some(Self {
-            input_file,
-            output_file,
-            size,
-        })
     }
+}
 
-    fn parse_scale_string<S: AsRef<str>>(raw: S) -> Result<(u32, u32), &'static str> {
-        let raw = raw.as_ref();
+#[derive(Clone, Copy, Debug)]
+pub enum Scale {
+    Absolute(u32, u32),
+    Percent(f32),
+}
 
-        let format_err = Err("Scale is not formatted as widthxheight or width,height! Please format your size as one of these.");
-        let splitchar = if raw.contains(',') {
-            ','
-        } else if raw.contains('x') {
-            'x'
-        } else {
-            return format_err;
-        };
+impl FromStr for Scale {
+    type Err = &'static str;
+
+    fn from_str(raw: &str) -> Result<Scale, &'static str> {
+        let format_err = Err("Scale cannot be parsed from string. Please format as WidthxHeight; Width,Height; or scale%");
+        let splitchar = if raw.contains(',') { ',' } else { 'x' };
 
         match raw.split_once(splitchar) {
             Some((width_s, height_s)) => {
@@ -103,9 +81,27 @@ impl CliArgs {
                     .parse()
                     .map_err(|_| "Failed to parse height as a number!")?;
 
-                Ok((width, height))
+                Ok(Self::Absolute(width, height))
+            }
+            None if raw.ends_with('%') => {
+                let percent: f32 = raw
+                    .strip_suffix('%')
+                    .unwrap()
+                    .parse()
+                    .map_err(|_| "Failed to parse scale percent!")?;
+
+                Ok(Self::Percent(percent))
             }
             None => format_err,
+        }
+    }
+}
+
+impl fmt::Display for Scale {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Absolute(width, height) => write!(f, "{}x{}", width, height),
+            Self::Percent(perc) => write!(f, "{:.1}x", perc / 100.0),
         }
     }
 }

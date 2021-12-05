@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-authors = ["Genevive Alfirevic <gen@nyble.dev"]
+authors = ["Genevive <gen@nyble.dev"]
 license-file = "LICENSE"
 
 name = "neam"
@@ -10,4 +10,3 @@ repository = "https://github.com/gennyble/neam"
 
 [dependencies]
 png = "0.17"
-getopts = "0.2"

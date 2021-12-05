@@ -1,0 +1,11 @@
+Usage: neam input_file $scale [output_file]
+
+$scale:
+	Scale can be a width and height separated by an x, WidthxHeight, or
+	it can be a percent to scale by: 14%, 50%, 200%, etc.
+
+output_file:
+	If no output path is provided, it defaults to the input
+	file name with the scale appended after an underscore.
+		original.png 200%    -> original_2.0x.png
+		original.png 512x512 -> original_512x512.png
