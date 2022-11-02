@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-authors = ["Genevive <gen@nyble.dev"]
+authors = ["Genevieve <gen@nyble.dev"]
 license-file = "LICENSE"
 
 name = "neam"
