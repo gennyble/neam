@@ -4,7 +4,7 @@ mod nearest;
 use std::{fs::File, path::PathBuf};
 
 use cli::Scale;
-use png::{BitDepth, Decoder, Encoder};
+use png::{Decoder, Encoder};
 
 fn main() {
     let cli = match cli::CliArgs::parse() {
@@ -85,7 +85,16 @@ fn scale(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
 
     let mut encoder = Encoder::new(ofile, new_width, new_height);
     encoder.set_color(info.color_type);
-    encoder.set_depth(BitDepth::Eight);
+    encoder.set_depth(info.bit_depth);
+
+    let png_info = reader.info();
+    if let Some(palette) = png_info.palette.as_deref() {
+        encoder.set_palette(palette.clone());
+    }
+
+    if let Some(trns) = png_info.trns.as_deref() {
+        encoder.set_trns(trns.clone())
+    }
 
     match encoder.write_header() {
         Err(e) => {
