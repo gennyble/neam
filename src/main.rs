@@ -1,5 +1,4 @@
 mod cli;
-mod nearest;
 
 use std::{fs::File, path::PathBuf};
 
@@ -62,7 +61,7 @@ fn scale(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
         }
     };
 
-    let new = nearest::nearest(
+    let new = neam::nearest(
         &buf,
         info.color_type.samples(),
         info.width,
