@@ -3,7 +3,11 @@ mod cli;
 use std::{fs::File, path::PathBuf};
 
 use cli::Scale;
-use png::{Decoder, Encoder};
+use gifed::{
+	block::Block,
+	reader::{Decoder, ReadBlock, Reader},
+	writer::{ImageBuilder, Writer},
+};
 
 fn main() {
 	let cli = match cli::CliArgs::parse() {
@@ -11,7 +15,22 @@ fn main() {
 		None => return,
 	};
 
-	scale_png(cli.input_file, cli.output_file, cli.scale);
+	let ext = match cli.input_file.extension() {
+		None => {
+			eprintln!("No extension! Not yet smart enough to discerne file type like this, sorry!");
+			return;
+		}
+		Some(ext) => ext.to_str().unwrap(),
+	};
+
+	match ext.to_lowercase().as_str() {
+		"png" => scale_png(cli.input_file, cli.output_file, cli.scale),
+		"gif" => scale_gif(cli.input_file, cli.output_file, cli.scale),
+		_ => {
+			eprintln!("cannot yet scale {ext} type files");
+			return;
+		}
+	}
 }
 
 fn scale_png(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
@@ -23,7 +42,7 @@ fn scale_png(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
 		}
 	};
 
-	let decoder = Decoder::new(file);
+	let decoder = png::Decoder::new(file);
 	let mut reader = match decoder.read_info() {
 		Ok(reader) => reader,
 		Err(e) => {
@@ -49,17 +68,7 @@ fn scale_png(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
 		}
 	};
 
-	let (new_width, new_height) = match scale {
-		Scale::Absolute(width, height) => (width, height),
-		Scale::Percent(mut perc) => {
-			perc /= 100.0;
-
-			(
-				(info.width as f32 * perc) as u32,
-				(info.height as f32 * perc) as u32,
-			)
-		}
-	};
+	let (new_width, new_height) = scale.get(info.width, info.height);
 
 	let new = neam::nearest(
 		&buf,
@@ -82,7 +91,7 @@ fn scale_png(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
 		}
 	};
 
-	let mut encoder = Encoder::new(ofile, new_width, new_height);
+	let mut encoder = png::Encoder::new(ofile, new_width, new_height);
 	encoder.set_color(info.color_type);
 	encoder.set_depth(info.bit_depth);
 
@@ -116,4 +125,65 @@ fn scale_png(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
 			Ok(()) => (),
 		},
 	}
+}
+
+fn scale_gif(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
+	let mut gif = Decoder::file(input_file).unwrap().read().unwrap();
+
+	let (new_gif_width, new_gif_height) = scale.get(
+		gif.screen_descriptor.width as u32,
+		gif.screen_descriptor.height as u32,
+	);
+
+	let file = File::create(output_file).unwrap();
+	let mut out = Writer::new(
+		file,
+		new_gif_width as u16,
+		new_gif_height as u16,
+		gif.palette.clone(),
+	)
+	.unwrap();
+
+	loop {
+		match gif.block().unwrap() {
+			None => break,
+			Some(ReadBlock {
+				block: Block::CompressedImage(img),
+				..
+			}) => {
+				let indexed = img.decompress().unwrap();
+				let (new_width, new_height) =
+					scale.get(indexed.width() as u32, indexed.height() as u32);
+
+				let new_indicies = neam::nearest(
+					&indexed.indicies,
+					1,
+					indexed.width() as u32,
+					indexed.height() as u32,
+					new_width,
+					new_height,
+				);
+
+				let mut builder = ImageBuilder::new(new_width as u16, new_height as u16);
+
+				if indexed.left() != 0 || indexed.top() != 0 {
+					let (new_left, new_top) =
+						scale.get(indexed.left() as u32, indexed.top() as u32);
+					builder = builder.offset(new_left as u16, new_top as u16);
+				}
+
+				if let Some(palette) = indexed.local_color_table {
+					builder = builder.palette(palette);
+				}
+
+				let scaled = builder.build(new_indicies).unwrap();
+				out.image(scaled).unwrap();
+			}
+			Some(ReadBlock { block, .. }) => {
+				out.block(block).unwrap();
+			}
+		}
+	}
+
+	out.done().unwrap();
 }

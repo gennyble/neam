@@ -65,6 +65,22 @@ pub enum Scale {
 	Percent(f32),
 }
 
+impl Scale {
+	pub fn get(&self, current_width: u32, current_height: u32) -> (u32, u32) {
+		match self {
+			Scale::Absolute(width, height) => (*width, *height),
+			Scale::Percent(mut perc) => {
+				perc /= 100.0;
+
+				(
+					(current_width as f32 * perc) as u32,
+					(current_height as f32 * perc) as u32,
+				)
+			}
+		}
+	}
+}
+
 impl FromStr for Scale {
 	type Err = &'static str;
 

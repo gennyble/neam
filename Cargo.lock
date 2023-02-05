@@ -115,6 +115,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
+name = "gifed"
+version = "0.1.0"
+source = "git+https://github.com/gennyble/gifed#0dd0a6c2d910437d040b14994c80468f3bd6fbc7"
+dependencies = [
+ "weezl",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -128,6 +136,7 @@ dependencies = [
 name = "neam"
 version = "0.1.0"
 dependencies = [
+ "gifed",
  "png",
 ]
 
@@ -143,3 +152,9 @@ dependencies = [
  "encoding",
  "miniz_oxide",
 ]
+
+[[package]]
+name = "weezl"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9193164d4de03a926d909d3bc7c30543cecb35400c02114792c2cae20d5e2dbb"
