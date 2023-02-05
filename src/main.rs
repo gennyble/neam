@@ -5,7 +5,7 @@ use std::{fs::File, path::PathBuf};
 use cli::Scale;
 use gifed::{
 	block::Block,
-	reader::{Decoder, ReadBlock, Reader},
+	reader::{Decoder, ReadBlock},
 	writer::{ImageBuilder, Writer},
 };
 
@@ -134,6 +134,11 @@ fn scale_gif(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
 		gif.screen_descriptor.width as u32,
 		gif.screen_descriptor.height as u32,
 	);
+
+	if new_gif_width.max(new_gif_height) > u16::MAX as u32 {
+		eprintln!("New dimensions are too large! Resulting size is {new_gif_width}x{new_gif_height}, but both dimensions must be below {}", u16::MAX);
+		return;
+	}
 
 	let file = File::create(output_file).unwrap();
 	let mut out = Writer::new(
