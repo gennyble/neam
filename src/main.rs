@@ -11,10 +11,10 @@ fn main() {
         None => return,
     };
 
-    scale(cli.input_file, cli.output_file, cli.scale);
+    scale_png(cli.input_file, cli.output_file, cli.scale);
 }
 
-fn scale(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
+fn scale_png(input_file: PathBuf, output_file: PathBuf, scale: Scale) {
     let file = match File::open(&input_file) {
         Ok(file) => file,
         Err(e) => {
