@@ -1,13 +1,13 @@
-pub fn nearest(
-	orig: &[u8],
+pub fn nearest<T: Copy>(
+	orig: &[T],
 	samples: usize,
 	orig_width: u32,
 	orig_height: u32,
 	new_width: u32,
 	new_height: u32,
-) -> Vec<u8> {
+) -> Vec<T> {
 	let new_size = new_width as usize * new_height as usize;
-	let mut new = vec![0; new_size * samples];
+	let mut new = vec![orig[0]; new_size * samples];
 
 	for index in 0..new_size {
 		let x = index % new_width as usize;
