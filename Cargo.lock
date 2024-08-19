@@ -117,7 +117,7 @@ checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 [[package]]
 name = "gifed"
 version = "0.1.0"
-source = "git+https://github.com/gennyble/gifed#0dd0a6c2d910437d040b14994c80468f3bd6fbc7"
+source = "git+https://github.com/gennyble/gifed?rev=0dd0a6c2d910437d040b14994c80468f3bd6fbc7#0dd0a6c2d910437d040b14994c80468f3bd6fbc7"
 dependencies = [
  "weezl",
 ]

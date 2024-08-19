@@ -10,4 +10,4 @@ repository = "https://github.com/gennyble/neam"
 
 [dependencies]
 png = "0.17"
-gifed = { git = "https://github.com/gennyble/gifed" }
+gifed = { git = "https://github.com/gennyble/gifed", rev = "0dd0a6c2d910437d040b14994c80468f3bd6fbc7" }
