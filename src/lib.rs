@@ -9,6 +9,30 @@ pub fn nearest<T: Copy>(
 	let new_size = new_width as usize * new_height as usize;
 	let mut new = vec![orig[0]; new_size * samples];
 
+	nearest_buffer(
+		orig,
+		samples,
+		orig_width,
+		orig_height,
+		&mut new,
+		new_width,
+		new_height,
+	);
+
+	new
+}
+
+pub fn nearest_buffer<T: Copy>(
+	orig: &[T],
+	samples: usize,
+	orig_width: u32,
+	orig_height: u32,
+	new: &mut [T],
+	new_width: u32,
+	new_height: u32,
+) {
+	let new_size = new_width as usize * new_height as usize;
+
 	for index in 0..new_size {
 		let x = index % new_width as usize;
 		let y = index / new_width as usize;
@@ -25,6 +49,4 @@ pub fn nearest<T: Copy>(
 			std::ptr::copy_nonoverlapping(orig, new, samples);
 		}
 	}
-
-	new
 }
